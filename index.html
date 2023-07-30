@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>my-encoder</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+
+<body id="app">
+    <p>temp: {{temp}}</p>
+    <p><button @click="number = parseInt(Math.random() * 0xffffff)">randomize</button></p>
+    <table id="table">
+        <tr>
+            <td>DEC</td>
+            <td><input type="text" v-model="DEC"></td>
+            <td><copy-button :value="DEC" /></td>
+        </tr>
+        <tr>
+            <td>HEX</td>
+            <td><input type="text" v-model="HEX"></td>
+            <td><copy-button :value="HEX" /></td>
+        </tr>
+        <tr>
+            <td>BIN</td>
+            <td><input type="text" v-model="punctuatedBin"></td>
+            <td><copy-button :value="BIN" /></td>
+        </tr>
+        <tr>
+            <td>ascii</td>
+            <td><input type="text" v-model="base64"></td>
+            <td><copy-button :value="base64" /></td>
+        </tr>
+    </table>
+    <table>
+        <tr>
+            <td>binary</td>
+            <td>into</td>
+            <td>ascii</td>
+        </tr>
+        <tr>
+            <td>
+                <input type="text" v-model="binary"> <copy-button :value="binary" />
+            </td>
+            <td>⇔</td>
+            <td>
+                <input type="text" v-model="ascii"> <copy-button :value="ascii" />
+            </td>
+        </tr>
+    </table>
+    <footer class="container" id="footer">
+        <p>最終更新:{{ lastmod }}</p>
+        <p>© 2023 cheerppy</p>
+    </footer>
+</body>
+
+<script>
+    Vue.createApp({
+        data() {
+            return {
+                temp: "temp",
+                number: parseInt(Math.random() * 0x2fffff),
+                binary: "binaries",
+                chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+            }
+        },
+        computed: {
+            DEC: {
+                get() {
+                    return this.number ?? ""
+                },
+                set(input) {
+                    if (!input) { this.number = undefined; return; }
+                    this.number = parseInt(input)
+                },
+            },
+            HEX: {
+                get() {
+                    return this.number?.toString(16) ?? ""
+                },
+                set(input) {
+                    this.number = parseInt(input, 16)
+                },
+            },
+            BIN: {
+                get() {
+                    return this.number?.toString(2) ?? ""
+                },
+                set(input) {
+                    this.number = parseInt(input, 2)
+                },
+            },
+            punctuatedBin: {
+                get() {
+                    const length = (8 - this.BIN.length % 8) % 8
+                    return this.BIN
+                        .padStart(this.BIN.length + length, "0") // ゼロパディング
+                        .match(/(.{1,8})/g).join(" ") // 8文字区切り
+                        .replace(/^0*/, "") // ゼロパディングによる先頭0削除
+                },
+                set(input) {
+                    length.number = parseInt(input.replace(" ", ""), 2)
+                }
+            },
+            base64: {
+                get() {
+                    let oct = ("" + this.number?.toString(8))
+                    if (oct.length % 2) { oct = "0" + oct } // ゼロパディング
+                    return oct.match(/.{2}/g).map(this.octtob).join("") // 2文字ずつ変換
+                },
+                set(input) {
+                    const oct = Array.from(input).map(this.btooct).join("")
+                    console.log("set", input, oct)
+                    this.number = parseInt(oct, 8)
+                },
+            },
+            ascii: {
+                get() {
+                    return btoa(this.binary)
+                },
+                set(input) {
+                    this.binary = atob(input)
+                },
+            },
+            lastmod() {
+                const jst = new Date(document.lastModified);
+                const timezoneOffset = new Date().getTimezoneOffset()
+                const lastmod = jst.getFullYear() + "/" + (jst.getMonth() + 1) + "/" + jst.getDate() + " " + jst.getHours() + ":" + ("0" + jst.getMinutes()).slice(-2) + ":" + ("0" + jst.getSeconds()).slice(-2)
+                const timezone = (timezoneOffset === -540) ? "(JST)" :
+                    `GMT ${(timezoneOffset >= 0) ? "+" : ""}${Math.floor(timezoneOffset / -60)}:${timezoneOffset / 60}`
+                return lastmod + " " + timezone;
+            },
+        },
+        methods: {
+            octtob(oct) {
+                if (!/^[0-8/]{2}$/.test(oct)) { return undefined }
+                return this.chars.charAt(parseInt(oct, 8))
+            },
+            btooct(char) {
+                if (!/^[a-zA-Z0-9+\/]$/.test(char)) { return undefined }
+                let oct = ("" + this.chars.indexOf(char).toString(8))
+                if (oct.length % 2) { oct = "0" + oct }
+                return oct
+            },
+        }
+    }).component("CopyButton", {
+        props: ["value"],
+        data() { return { copied: false } },
+        render() {
+            return Vue.h("button", { onClick: this.copy }, !this.copied ? "copy" : "copied")
+        },
+        methods: {
+            async copy() {
+                await navigator.clipboard.writeText(this.value)
+                this.copied = true
+                // alert(this.value)
+                setTimeout(() => { this.copied = false }, 2000)
+            }
+        }
+    }).mount("#app");
+
+</script>
+<style>
+    input {
+        width: 240px;
+    }
+</style>
+
+</html>
